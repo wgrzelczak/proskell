@@ -1,0 +1,14 @@
+version: '3'
+
+services:
+  proskell-main-service:
+    container_name: proskell
+    image: proskell-app
+    build:
+      context: .
+    
+    volumes:
+    - ./data/src/:/var/www/html/
+    - ./data/haskell/:/etc/proskell/haskell/
+    ports:
+    - "80:80"
