@@ -3,11 +3,12 @@
   <title>PHP Test</title>
  </head>
  <body>
-SUBMIT
+<a href='/index.php'>Start page</a>
+
  <?php
  # File paths
  $filepath_code = '/tmp/haskell_test.hs';
- $filepath_program_input = '/tmp/haskell_test.in';
+ $filepath_program_input = '/etc/proskell/haskell/exercise_00/in';
  $filepath_program_output = '/tmp/haskell_test.out';
 
  # Parse url
@@ -24,19 +25,20 @@ SUBMIT
  # Compile and run
 
  $run_command = escapeshellcmd('/etc/proskell/haskell/compile_and_run.py');
- $run_params  = '--input=' . $filepath_program_input;
- $run_params .= '--output='. $filepath_program_output;
- $run_params .= '--code=' . $filepath_code;
+ $run_params  = ' --input=' . $filepath_program_input;
+ $run_params .= ' --output='. $filepath_program_output;
+ $run_params .= ' --code=' . $filepath_code;
 
- $run_command .= ' '.$run_params; 
+ $run_command .= $run_params; 
  exec($run_command, $output, $status);
  
  # Print results
 
  print_r($run_command);
- print_r($output);
+# print_r($output);
  print_r($status);
  
  ?> 
+ <pre><?php print_r($output);?></pre>
  </body>
 </html>
