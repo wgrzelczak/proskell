@@ -1,7 +1,7 @@
 import os
 import docker # Needed: pip install docker
 import time
-
+import asyncio
 
 WORKER_HASKELL_IMAGE_NAME = "worker_haskell_img:proskell"
 WORKER_HASKELL_NAME = "worker_haskell"
@@ -15,40 +15,39 @@ def clean_worker_container():
     except:
         pass
 
-def create_worker(cmd):
+async def create_and_run_worker(cmd):
     clean_worker_container()
 
-    worker = client.containers.run(
+    out = client.containers.run(
         image = WORKER_HASKELL_IMAGE_NAME,
         name = WORKER_HASKELL_NAME,
         entrypoint = cmd,
-        detach = True
+        remove = True
     )
-    return worker
+    return out
 
 
-def main():
+async def main():
     print("Creating worker...")
 
-    cmd = f"bash -c 'time (echo hello world; echo 2; sleep 1; echo 3)'"
+    cmd = f"bash -c 'time (echo hello world; echo 2; sleep 20; echo 3)'"
     #cmd = f"bash -c time echo"
 
-    worker = create_worker(cmd)
 
-    #while worker.status is not "exit":
-    #    print(worker.status)
-    print("Sleeping...")
-    time.sleep(3)
-
-    print("Results:")
-    print(worker.logs().decode())
-
-    print("Removing container...")
-    worker.remove(force = True)
+    try:
+        out = await asyncio.wait_for(
+            asyncio.gather(create_and_run_worker(cmd)),
+            timeout=1.0
+        )
+        print("Results:")
+        print(f"Out: {out}")
+    except asyncio.TimeoutError:
+        print('timeout!')
+    
 
 
 if __name__ == "__main__":
     startTime = time.time()
-    main()
+    asyncio.run(main())
     endTime = time.time()
     print(f"main() time: {endTime-startTime}")
