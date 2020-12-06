@@ -6,8 +6,13 @@ import json
 
 WORKER_HASKELL_IMAGE_NAME = "worker_haskell_img:proskell"
 WORKER_HASKELL_NAME = "worker_haskell"
+WORKER_PROLOG_IMAGE_NAME = "worker_prolog_img:proskell"
+WORKER_PROLOG_NAME = "worker_prolog"
 WORKER_DATA_DIR = "/var/proskell"
 SERVER_DATA_DIR = "mnt_data"
+
+JSON_HASKELL_ID = "haskell"
+JSON_PROLOG_ID = "prolog"
 
 def GetWorkerRequestDir(request):
     return f"{WORKER_DATA_DIR}/{request['userid']}/{request['timestamp']}"
@@ -18,29 +23,42 @@ def GetServerRequestDir(request):
 def GetServerDir():
     return os.getcwd()
 
+def GetCompilerByLanguage(lang):
+    if lang == JSON_HASKELL_ID:
+        return "runhaskell"
+    if lang == JSON_PROLOG_ID:
+        return "swipl"
+    return ""
+
 client = docker.from_env()
 
 async def process_all_tests(request):
     tests = request["tests"]
+
+    compiler = GetCompilerByLanguage(request["language"])
+    if compiler == "":
+        print(f"Execution command is empty!")
+        return
+
     for i in range(len(tests)):
         print(f"Processing test {i}...")
-        cmd = f"bash -c 'cat {GetWorkerRequestDir(request)}/test{i} | runhaskell {GetWorkerRequestDir(request)}/code'"
-        stdout = await process_test(cmd, request["timeoutMs"])
+        cmd = f"bash -c 'cat {GetWorkerRequestDir(request)}/test{i} | {compiler} {GetWorkerRequestDir(request)}/code.xxx && sleep 2'"
+        stdout = await process_test(cmd, request["timeoutMs"], request["language"])
         tests[i]["result"] = f"{stdout}"
 
 
-async def process_test(cmd, timeout):
+async def process_test(cmd, timeout, language):
     print("Creating worker...")
     try:
         # TODO: timeout does not work now
         out = await asyncio.wait_for(
-            asyncio.gather(create_and_run_worker(cmd)),
+            asyncio.gather(create_and_run_worker(cmd, language)),
             timeout = timeout
         )
         print(f"Worker stdout: {out}")
         return out
     except asyncio.TimeoutError:
-        print('Worker timeout!')
+        print("Worker timeout!")
         return "Timeout"
 
 
@@ -50,13 +68,31 @@ def clean_worker_container():
         worker.remove(force = True)
     except:
         pass
+    try:
+        worker = client.containers.get(WORKER_PROLOG_NAME)
+        worker.remove(force = True)
+    except:
+        pass
 
-async def create_and_run_worker(cmd):
+async def create_and_run_worker(cmd, language):
     clean_worker_container()
+    imageName = ""
+    containerName = "" 
 
+    if language == JSON_HASKELL_ID:
+        imageName = WORKER_HASKELL_IMAGE_NAME
+        containerName = WORKER_HASKELL_NAME
+    elif language == JSON_PROLOG_ID:
+        imageName = WORKER_PROLOG_IMAGE_NAME
+        containerName = WORKER_PROLOG_NAME
+
+    if (not imageName) or (not containerName):
+        print("Cannot create worker! Language type is mismatched!")
+        return "Language mismatch"
+        
     out = client.containers.run(
-        image = WORKER_HASKELL_IMAGE_NAME,
-        name = WORKER_HASKELL_NAME,
+        image = imageName,
+        name = containerName,
         entrypoint = cmd,
         remove = True,
         volumes = {
@@ -73,7 +109,7 @@ def validate_request(request):
         raise ValueError("timestamp is missing")
     if "language" not in request:
         raise ValueError("language is missing")
-    if request["language"] not in ["haskell"]:
+    if request["language"] not in [JSON_HASKELL_ID, JSON_PROLOG_ID]:
         raise ValueError("language is not supported")
     
     if "code" not in request:
@@ -93,7 +129,7 @@ def save_files_on_volume(request):
             file.write(tests[i]["input"])
 
     # Save code
-    with open(f"{GetServerRequestDir(request)}/code", "w+") as file:
+    with open(f"{GetServerRequestDir(request)}/code.xxx", "w+") as file:
             file.write(request["code"])
 
 def process_request(jsonStr):
@@ -110,7 +146,10 @@ def process_request(jsonStr):
 
 def main():
     # TODO: listen for json request instead of loading json test
-    with open("test_input.json") as file:
+    #with open("input_test_haskell.json") as file:
+    #    request = file.read()
+    #    process_request(request)
+    with open("input_test_prolog.json") as file:
         request = file.read()
         process_request(request)
     
