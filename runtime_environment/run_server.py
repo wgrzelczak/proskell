@@ -77,7 +77,7 @@ def clean_worker_container():
 async def create_and_run_worker(cmd, language):
     clean_worker_container()
     imageName = ""
-    containerName = "" 
+    containerName = ""
 
     if language == JSON_HASKELL_ID:
         imageName = WORKER_HASKELL_IMAGE_NAME
@@ -89,7 +89,7 @@ async def create_and_run_worker(cmd, language):
     if (not imageName) or (not containerName):
         print("Cannot create worker! Language type is mismatched!")
         return "Language mismatch"
-        
+
     out = client.containers.run(
         image = imageName,
         name = containerName,
@@ -111,7 +111,7 @@ def validate_request(request):
         raise ValueError("language is missing")
     if request["language"] not in [JSON_HASKELL_ID, JSON_PROLOG_ID]:
         raise ValueError("language is not supported")
-    
+
     if "code" not in request:
         raise ValueError("language is missing")
     if "timeoutMs" not in request:
@@ -149,10 +149,11 @@ def main():
     #with open("input_test_haskell.json") as file:
     #    request = file.read()
     #    process_request(request)
-    with open("input_test_prolog.json") as file:
+    cwd = os.getcwd()
+    with open('input_test_prolog.json') as file:
         request = file.read()
         process_request(request)
-    
+
 if __name__ == "__main__":
     startTime = time.time()
     main()
