@@ -1,0 +1,2 @@
+FLASK_APP=tester
+FLASK_ENV=development

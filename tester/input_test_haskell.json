@@ -1,0 +1,17 @@
+{
+    "userid": 151617,
+    "timestamp": 1598630096,
+    "language": "haskell",
+
+    "timeoutMs": 1000,
+    "code": "main = do putStrLn \"Haskell main()\"\n          line <- getLine\n          putStrLn (\"First line from stdin:\" ++ line)",
+    
+    "tests":
+    [
+        {"input": "input1"},
+        {"input": "input2"},
+        {"input": "input3"},
+        {"input": "input4"},
+        {"input": "input5"}
+    ]
+}
