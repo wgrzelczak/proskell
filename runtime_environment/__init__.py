@@ -1,13 +1,13 @@
-from flask import Flask
+from flask import (Flask, request, Response, json)
 import os
 import docker  # Needed: pip install docker
 import time
 import asyncio
 import json
 
-WORKER_HASKELL_IMAGE_NAME = "worker_haskell_img:proskell"
+WORKER_HASKELL_IMAGE_NAME = "haskell"
 WORKER_HASKELL_NAME = "worker_haskell"
-WORKER_PROLOG_IMAGE_NAME = "worker_prolog_img:proskell"
+WORKER_PROLOG_IMAGE_NAME = "swipl"
 WORKER_PROLOG_NAME = "worker_prolog"
 WORKER_DATA_DIR = "/var/proskell"
 SERVER_DATA_DIR = "mnt_data"
@@ -15,14 +15,18 @@ SERVER_DATA_DIR = "mnt_data"
 JSON_HASKELL_ID = "haskell"
 JSON_PROLOG_ID = "prolog"
 
+
 def GetWorkerRequestDir(request):
     return f"{WORKER_DATA_DIR}/{request['userid']}/{request['timestamp']}"
+
 
 def GetServerRequestDir(request):
     return f"{SERVER_DATA_DIR}/{request['userid']}/{request['timestamp']}"
 
+
 def GetServerDir():
     return os.getcwd()
+
 
 def GetCompilerByLanguage(lang):
     if lang == JSON_HASKELL_ID:
@@ -31,7 +35,9 @@ def GetCompilerByLanguage(lang):
         return "swipl"
     return ""
 
+
 client = docker.from_env()
+
 
 async def process_all_tests(request):
     tests = request["tests"]
@@ -47,6 +53,7 @@ async def process_all_tests(request):
         stdout = await process_test(cmd, request["timeoutMs"], request["language"])
         tests[i]["result"] = f"{stdout}"
 
+
 async def process_test(cmd, timeout, language):
     print("Creating worker...")
     try:
@@ -61,7 +68,9 @@ async def process_test(cmd, timeout, language):
         print("Worker timeout!")
         return "Timeout"
 
+
 def clean_worker_container():
+
     try:
         worker = client.containers.get(WORKER_HASKELL_NAME)
         worker.remove(force=True)
@@ -72,6 +81,7 @@ def clean_worker_container():
         worker.remove(force=True)
     except:
         pass
+
 
 async def create_and_run_worker(cmd, language):
     clean_worker_container()
@@ -100,6 +110,7 @@ async def create_and_run_worker(cmd, language):
     )
     return out
 
+
 def validate_request(request):
     if "userid" not in request:
         raise ValueError("userid is missing")
@@ -117,6 +128,7 @@ def validate_request(request):
     if "tests" not in request or not isinstance(request["tests"], list) or len(request["tests"]) == 0:
         raise ValueError("tests are missing")
 
+
 def save_files_on_volume(request):
     os.makedirs(GetServerRequestDir(request), exist_ok=True)
 
@@ -130,6 +142,7 @@ def save_files_on_volume(request):
     with open(f"{GetServerRequestDir(request)}/code.xxx", "w+") as file:
         file.write(request["code"])
 
+
 def process_request(jsonStr):
     request = json.loads(jsonStr)
 
@@ -142,13 +155,16 @@ def process_request(jsonStr):
     except ValueError as err:
         print(f"ValueError: {err}")
 
+
 def main():
     # TODO: listen for json request instead of loading json test
-    with open("tester\input_test_haskell.json") as file:
+
+    print(os.getcwd())
+    with open("runtime_environment\input_test_haskell.json") as file:
         request = file.read()
         process_request(request)
     # cwd = os.getcwd()
-    # with open('tester\input_test_prolog.json') as file:
+    # with open('runtime_environment\worker_prolog') as file:
     #     request = file.read()
     #     process_request(request)
 # if __name__ == "__main__":
@@ -180,17 +196,21 @@ def create_app(test_config=None):
         pass
 
     # a simple page that says hello
+
     @app.route('/hello')
     def hello():
         return 'Hello, World!'
 
-
-    @app.route('/')
+    @app.route('/', methods=['GET', 'POST'])
     def main_function():
-        startTime = time.time()
-        main()
-        endTime = time.time()
-        response = f"time: {endTime-startTime}"
-        return response
+        if request.method == 'GET':
+            return 'ALA MA KOTA'
+        if request.method == 'POST':
+            print(request.data)
+            startTime = time.time()
+            # main()
+            endTime = time.time()
+            response = f"time: {endTime-startTime}"
+            return Response(response, mimetype='application/json')
 
     return app

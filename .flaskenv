@@ -1,3 +1,3 @@
 FLASK_APP=runtime_environment
 FLASK_ENV=development
-FLASK_RUN_PORT=1337
+FLASK_RUN_PORT=2000
