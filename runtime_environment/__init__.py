@@ -5,6 +5,7 @@ import time
 import asyncio
 import json
 
+
 WORKER_HASKELL_IMAGE_NAME = "haskell"
 WORKER_HASKELL_NAME = "worker_haskell"
 WORKER_PROLOG_IMAGE_NAME = "swipl"
@@ -206,7 +207,9 @@ def create_app(test_config=None):
         if request.method == 'GET':
             return 'ALA MA KOTA'
         if request.method == 'POST':
-            print(request.data)
+            print('POST')
+            print(request)
+            print(request.json)
             startTime = time.time()
             # main()
             endTime = time.time()
