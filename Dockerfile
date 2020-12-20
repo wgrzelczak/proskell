@@ -14,5 +14,5 @@ RUN pip install -r requirements.txt && pip install gunicorn
 COPY . .
 
 # command to run on container start
-# CMD ["gunicorn"  , "--bind", "0.0.0.0:2000", "runtime_environment:create_app\(\)"]
-CMD ["flask"  , "run", "--host", "0.0.0.0"]
+CMD ["gunicorn"  , "--bind", "0.0.0.0:2000", "runtime_environment.wsgi:app"]
+# CMD ["flask"  , "run", "--host", "0.0.0.0"]
