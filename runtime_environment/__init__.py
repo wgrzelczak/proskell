@@ -4,6 +4,7 @@ import docker  # Needed: pip install docker
 import time
 import asyncio
 import json
+import platform
 
 
 WORKER_HASKELL_IMAGE_NAME = "haskell"
@@ -159,20 +160,21 @@ def process_request(jsonStr):
 
 def main():
     # TODO: listen for json request instead of loading json test
+    # accordingly to the host system use proper path
 
-    print(os.getcwd())
-    with open("runtime_environment\input_test_haskell.json") as file:
-        request = file.read()
-        process_request(request)
+    if platform.system() == 'Linux' or platform.system() == 'Darwin':
+        with open("runtime_environment/input_test_haskell.json") as file:
+            request = file.read()
+            process_request(request)
+    # windows
+    else:
+        with open("runtime_environment\input_test_haskell.json") as file:
+            request = file.read()
+            process_request(request)
     # cwd = os.getcwd()
     # with open('runtime_environment\worker_prolog') as file:
     #     request = file.read()
     #     process_request(request)
-# if __name__ == "__main__":
-#     startTime = time.time()
-#     main()
-#     endTime = time.time()
-#     print(f"main() time: {endTime-startTime}")
 
 
 def create_app():
@@ -196,12 +198,6 @@ def create_app():
     except OSError:
         pass
 
-    # a simple page that says hello
-
-    @app.route('/hello')
-    def hello():
-        return 'Hello, World!'
-
     @app.route('/', methods=['GET', 'POST'])
     def main_function():
         if request.method == 'GET':
@@ -211,7 +207,7 @@ def create_app():
             print(request)
             print(request.json)
             startTime = time.time()
-            # main()
+            main()
             endTime = time.time()
             response = f"time: {endTime-startTime}"
             return Response(response, mimetype='application/json')
