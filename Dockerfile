@@ -4,7 +4,7 @@ FROM python:3.8
 # set the working directory in the container
 WORKDIR /code
 
-EXPOSE 2000
+EXPOSE 4000
 # copy the dependencies file to the working directory
 COPY requirements.txt .
 
