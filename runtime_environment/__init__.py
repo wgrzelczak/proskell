@@ -11,7 +11,7 @@ WORKER_HASKELL_IMAGE_NAME = "haskell"
 WORKER_HASKELL_NAME = "worker_haskell"
 WORKER_PROLOG_IMAGE_NAME = "swipl"
 WORKER_PROLOG_NAME = "worker_prolog"
-WORKER_DATA_DIR = "/var/proskell"
+WORKER_DATA_DIR = "/home/wroobel/proskell"
 SERVER_DATA_DIR = "mnt_data"
 
 JSON_HASKELL_ID = "haskell"
@@ -27,7 +27,7 @@ def GetServerRequestDir(request):
 
 
 def GetServerDir():
-    return os.getcwd()
+    return "/home/wroobel/proskell"
 
 
 def GetCompilerByLanguage(lang):
