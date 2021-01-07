@@ -11,7 +11,7 @@ WORKER_HASKELL_IMAGE_NAME = "haskell"
 WORKER_HASKELL_NAME = "worker_haskell"
 WORKER_PROLOG_IMAGE_NAME = "swipl"
 WORKER_PROLOG_NAME = "worker_prolog"
-WORKER_DATA_DIR = "/home/wroobel/proskell"
+WORKER_DATA_DIR = "/var/proskell"
 SERVER_DATA_DIR = "mnt_data"
 
 JSON_HASKELL_ID = "haskell"
@@ -27,7 +27,7 @@ def GetServerRequestDir(request):
 
 
 def GetServerDir():
-    return "/home/wroobel/proskell"
+    return "/var/proskell"
 
 
 def GetCompilerByLanguage(lang):
@@ -145,17 +145,19 @@ def save_files_on_volume(request):
         file.write(request["code"])
 
 
-def process_request(jsonStr):
-    request = json.loads(jsonStr)
+def process_request(json):
+    request = json
 
-    print(json.dumps(request, indent=2))
+    # print(json.dumps(request, indent=2))
     try:
         validate_request(request)
         save_files_on_volume(request)
         asyncio.run(process_all_tests(request))
-        print(json.dumps(request, indent=2))
+        # print(json.dumps(request, indent=2))
     except ValueError as err:
         print(f"ValueError: {err}")
+
+    return request
 
 
 def main():
@@ -207,9 +209,10 @@ def create_app():
             print(request)
             print(request.json)
             startTime = time.time()
-            main()
+            # main()
+            response = process_request(request.json)
             endTime = time.time()
-            response = f"time: {endTime-startTime}"
-            return Response(response, mimetype='application/json')
+            return response
+            # return Response(response, mimetype='application/json')
 
     return app

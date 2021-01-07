@@ -2,8 +2,8 @@
 FROM python:3.8
 
 # set the working directory in the container
-WORKDIR /home/wroobel/proskell
-COPY . /home/wroobel/proskell
+WORKDIR /var/proskell
+COPY . /var/proskell
 
 EXPOSE 4000
 # copy the dependencies file to the working directory
