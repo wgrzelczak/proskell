@@ -4,6 +4,7 @@ import docker
 import time
 import json
 import platform
+import shutil
 
 SUCCESS = 0
 ERROR = 1
@@ -151,11 +152,15 @@ def save_files_on_volume(request):
         file.write(request["code"])
 
 
+def clean_request_dir(request):
+    shutil.rmtree(GetServerRequestDir(request), ignore_errors=True)
+
 def process_request(request):
     try:
         validate_request(request)
         save_files_on_volume(request)
         process_all_tests(request)
+        clean_request_dir(request)
     except ValueError as err:
         print(f"ValueError: {err}")
 
