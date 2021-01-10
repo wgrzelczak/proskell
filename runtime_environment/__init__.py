@@ -165,7 +165,7 @@ def main():
     # accordingly to the host system use proper path
 
     if platform.system() == 'Linux' or platform.system() == 'Darwin':
-        with open("runtime_environment/input_test_haskell.json") as file:
+        with open("./runtime_environment/input_test_haskell.json") as file:
             request = file.read()
             process_request(request)
     # windows
