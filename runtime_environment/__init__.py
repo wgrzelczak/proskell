@@ -2,20 +2,22 @@ from flask import (Flask, request, Response, json)
 import os
 import docker  # Needed: pip install docker
 import time
-import asyncio
 import json
 import platform
 
 
 WORKER_HASKELL_IMAGE_NAME = "haskell"
 WORKER_HASKELL_NAME = "worker_haskell"
-WORKER_PROLOG_IMAGE_NAME = "swipl"
+WORKER_PROLOG_IMAGE_NAME = "prolog"
 WORKER_PROLOG_NAME = "worker_prolog"
 WORKER_DATA_DIR = "/var/proskell"
 SERVER_DATA_DIR = "mnt_data"
 
 JSON_HASKELL_ID = "haskell"
 JSON_PROLOG_ID = "prolog"
+
+def GetServerMainDirectory():
+    return os.path.dirname(os.path.realpath(__file__))
 
 
 def GetWorkerRequestDir(request):
@@ -27,52 +29,50 @@ def GetServerRequestDir(request):
 
 
 def GetServerDir():
-    return "/var/proskell"
+    if platform.system() == 'Linux' or platform.system() == 'Darwin':
+        return "/var/proskell"
+    else:
+        return os.getcwd()
 
-
-def GetCompilerByLanguage(lang):
+def GetFiletypeByLanguage(lang):
     if lang == JSON_HASKELL_ID:
-        return "runhaskell"
+        return "hs"
     if lang == JSON_PROLOG_ID:
-        return "swipl"
+        return "pl"
     return ""
-
 
 client = docker.from_env()
 
 
-async def process_all_tests(request):
+def process_all_tests(request):
     tests = request["tests"]
+    lang = request['language']
 
-    compiler = GetCompilerByLanguage(request["language"])
-    if compiler == "":
+    executable = f"{lang}_out"
+
+    # Compile
+    cmd = ""
+
+    if lang == JSON_HASKELL_ID:
+        cmd = f"ghc -o {executable} -O2 code.{GetFiletypeByLanguage(lang)}"
+    if lang == JSON_PROLOG_ID:
+        cmd = f"swipl -g main -o {executable} -c code.{GetFiletypeByLanguage(lang)}"
+
+    if cmd == "":
         print(f"Execution command is empty!")
         return
 
+    stdout = create_and_run_worker(cmd, request, 0)
+
+    # Run Tests
     for i in range(len(tests)):
         print(f"Processing test {i}...")
-        cmd = f"bash -c 'cat {GetWorkerRequestDir(request)}/test{i} | {compiler} {GetWorkerRequestDir(request)}/code.xxx && sleep 2'"
-        stdout = await process_test(cmd, request["timeoutMs"], request["language"])
+        cmd = f"bash -c 'cat test{i} | ./{executable}'"
+        stdout = create_and_run_worker(cmd, request, request["timeoutMs"])
         tests[i]["result"] = f"{stdout}"
 
 
-async def process_test(cmd, timeout, language):
-    print("Creating worker...")
-    try:
-        # TODO: timeout does not work now
-        out = await asyncio.wait_for(
-            asyncio.gather(create_and_run_worker(cmd, language)),
-            timeout=timeout
-        )
-        print(f"Worker stdout: {out}")
-        return out
-    except asyncio.TimeoutError:
-        print("Worker timeout!")
-        return "Timeout"
-
-
 def clean_worker_container():
-
     try:
         worker = client.containers.get(WORKER_HASKELL_NAME)
         worker.remove(force=True)
@@ -85,15 +85,15 @@ def clean_worker_container():
         pass
 
 
-async def create_and_run_worker(cmd, language):
+def create_and_run_worker(cmd, request, timeout):
     clean_worker_container()
     imageName = ""
     containerName = ""
 
-    if language == JSON_HASKELL_ID:
+    if request['language'] == JSON_HASKELL_ID:
         imageName = WORKER_HASKELL_IMAGE_NAME
         containerName = WORKER_HASKELL_NAME
-    elif language == JSON_PROLOG_ID:
+    elif request['language'] == JSON_PROLOG_ID:
         imageName = WORKER_PROLOG_IMAGE_NAME
         containerName = WORKER_PROLOG_NAME
 
@@ -107,8 +107,9 @@ async def create_and_run_worker(cmd, language):
         entrypoint=cmd,
         remove=True,
         volumes={
-            f"{GetServerDir()}/{SERVER_DATA_DIR}": {'bind': WORKER_DATA_DIR, 'mode': 'rw'}
-        }
+           f"{GetServerMainDirectory()}/{SERVER_DATA_DIR}": {'bind': WORKER_DATA_DIR, 'mode': 'rw'}
+        },
+        working_dir=GetWorkerRequestDir(request)
     )
     return out
 
@@ -141,43 +142,35 @@ def save_files_on_volume(request):
             file.write(tests[i]["input"])
 
     # Save code
-    with open(f"{GetServerRequestDir(request)}/code.xxx", "w+") as file:
+    with open(f"{GetServerRequestDir(request)}/code.{GetFiletypeByLanguage(request['language'])}", "w+") as file:
         file.write(request["code"])
 
 
 def process_request(json):
     request = json
 
-    # print(json.dumps(request, indent=2))
     try:
         validate_request(request)
         save_files_on_volume(request)
-        asyncio.run(process_all_tests(request))
-        # print(json.dumps(request, indent=2))
+        process_all_tests(request)
     except ValueError as err:
         print(f"ValueError: {err}")
 
     return request
 
 
-def main():
-    # TODO: listen for json request instead of loading json test
-    # accordingly to the host system use proper path
+def process_tests():
+    def run_test(jsonPath):
+        filepath = os.path.join(GetServerMainDirectory(), jsonPath)
+        with open(filepath) as file:
+            request = json.loads(file.read())
+            response = process_request(request)
+            print(response)
 
-    if platform.system() == 'Linux' or platform.system() == 'Darwin':
-        with open("runtime_environment/input_test_haskell.json") as file:
-            request = file.read()
-            process_request(request)
-    # windows
-    else:
-        with open("runtime_environment\input_test_haskell.json") as file:
-            request = file.read()
-            process_request(request)
-    # cwd = os.getcwd()
-    # with open('runtime_environment\worker_prolog') as file:
-    #     request = file.read()
-    #     process_request(request)
+    run_test("input_test_haskell.json")
+    run_test("input_test_prolog.json")
 
+#process_tests()
 
 def create_app():
     # create and configure the app

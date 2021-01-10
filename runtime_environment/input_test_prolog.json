@@ -4,14 +4,14 @@
     "language": "prolog",
 
     "timeoutMs": 1000,
-    "code": "?- print(\"asdf\").\n?- read(Input).\n?- print(\"Hello\").\n?- halt.",
+    "code": "main :- print(\"Prolog main\"), read(Input), print(\"First line from stdin: \"), print(Input), halt.",
     
     "tests":
     [
-        {"input": "input1"},
-        {"input": "input2"},
-        {"input": "input3"},
-        {"input": "input4"},
-        {"input": "input5"}
+        {"input": "input1."},
+        {"input": "input2."},
+        {"input": "input3."},
+        {"input": "input4."},
+        {"input": "input5."}
     ]
 }

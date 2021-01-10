@@ -1,4 +1,0 @@
-?- print("asdf").
-?- read(Input).
-?- print("Hello").
-?- halt.
