@@ -20,6 +20,9 @@ Komponenty:
 ## RuntimeEnvServer
 Głównym zadaniem jest przetwarzanie kodu wejściowego i zarządzanie workerami (sprawdzenie statusu, uruchomienie, restartowanie, zabijanie po czasie lub wykorzystanych zasobach). Komunikacja z WebServerem za pomocą gRPC, komunikacja z Workerami za pomocą mapowalnych filestreamów.
 
+![RuntimeEnvServer diagram](http://www.plantuml.com/plantuml/png/TP4nJkj0443xFSMKIP4BE5_vaVwde0c8W580nSOxYSTUpwoyQrbsoIrGRaADxyNQIKGKH6NjwCsR9tdfWwv2NLhb2sAdArt2Fs53WOHlsAn3Qn4oIungH5LoovJcsbAdusUkAdIe0oHtQOT5dGDhwFRzc_WEcN2k85b9WzUpJHIOGG16Svjcq63U7rAI9ZuY0BI3oRsuIZUC0uFV1FwTGiYGOVAeYsba8VcpNJnLTPf92G-obS1Kw1TU5r8wiZ7ALRAlT3c8ByqQZiGGyaCAJKOMOV9VVFXyTupHqhLEcu8We0_74F8N6x-5d4Ud331sk6mnPzpBAAl7D40sfwihmj69rb-yPiz6Ga3pEbl4qLmTLsYdhi1hxeofcBXf-uEb7CGuQGXD_t7-YUDfjOneNTel)
+
+
 Komponenty:
 * python/node.js gRPC server
 * Docker do stawiania i komunikacji z workerami
