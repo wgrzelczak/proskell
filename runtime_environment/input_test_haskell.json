@@ -3,7 +3,7 @@
     "timestamp": 1598630096,
     "language": "haskell",
 
-    "timeoutMs": 1000,
+    "timeoutMs": 20,
     "code": "main = do putStrLn \"Haskell main()\"\n          line <- getLine\n          putStrLn (\"First line from stdin:\" ++ line)",
     
     "tests":

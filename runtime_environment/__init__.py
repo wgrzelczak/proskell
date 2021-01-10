@@ -86,10 +86,14 @@ def clean_worker_container():
         pass
 
 
-def create_and_run_worker(cmd, request, timeout):
+def create_and_run_worker(cmd, request, timeoutMs):
     clean_worker_container()
+    
     imageName = ""
     containerName = ""
+
+    if timeoutMs is not 0:
+        cmd = f"timeout -s USR2 {timeoutMs * 0.001} {cmd}"
 
     if request['language'] == JSON_HASKELL_ID:
         imageName = WORKER_HASKELL_IMAGE_NAME
@@ -115,8 +119,12 @@ def create_and_run_worker(cmd, request, timeout):
         )
         return (SUCCESS, stdout)
     except docker.errors.ContainerError as err:
+        # 124 is a SIG_USR2, which comes from timeout
+        if err.exit_status == 124:
+            return (ERROR, "Timeout!")
         return (ERROR, err.stderr)
-    except:
+    except Exception as err:
+        print(err)
         return (ERROR, "Internal error!")
 
 
