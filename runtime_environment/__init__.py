@@ -1,10 +1,12 @@
 from flask import (Flask, request, Response, json)
 import os
-import docker  # Needed: pip install docker
+import docker
 import time
 import json
 import platform
 
+SUCCESS = 0
+ERROR = 1
 
 WORKER_HASKELL_IMAGE_NAME = "haskell"
 WORKER_HASKELL_NAME = "worker_haskell"
@@ -16,10 +18,6 @@ SERVER_DATA_DIR = "mnt_data"
 JSON_HASKELL_ID = "haskell"
 JSON_PROLOG_ID = "prolog"
 
-def GetServerMainDirectory():
-    return os.path.dirname(os.path.realpath(__file__))
-
-
 def GetWorkerRequestDir(request):
     return f"{WORKER_DATA_DIR}/{request['userid']}/{request['timestamp']}"
 
@@ -27,12 +25,11 @@ def GetWorkerRequestDir(request):
 def GetServerRequestDir(request):
     return f"{SERVER_DATA_DIR}/{request['userid']}/{request['timestamp']}"
 
-
 def GetServerDir():
     if platform.system() == 'Linux' or platform.system() == 'Darwin':
         return "/var/proskell"
     else:
-        return os.getcwd()
+        return os.path.dirname(os.path.realpath(__file__))
 
 def GetFiletypeByLanguage(lang):
     if lang == JSON_HASKELL_ID:
@@ -40,9 +37,6 @@ def GetFiletypeByLanguage(lang):
     if lang == JSON_PROLOG_ID:
         return "pl"
     return ""
-
-client = docker.from_env()
-
 
 def process_all_tests(request):
     tests = request["tests"]
@@ -62,14 +56,20 @@ def process_all_tests(request):
         print(f"Execution command is empty!")
         return
 
-    stdout = create_and_run_worker(cmd, request, 0)
+    (status, stdout) = create_and_run_worker(cmd, request, 0)
+    request["result_status"] = status
+    request["result_stdout"] = stdout
+
+    if status is not SUCCESS:
+        return
 
     # Run Tests
     for i in range(len(tests)):
         print(f"Processing test {i}...")
         cmd = f"bash -c 'cat test{i} | ./{executable}'"
-        stdout = create_and_run_worker(cmd, request, request["timeoutMs"])
-        tests[i]["result"] = f"{stdout}"
+        (status, stdout) = create_and_run_worker(cmd, request, request["timeoutMs"])
+        tests[i]["result_status"] = status
+        tests[i]["result_stdout"] = stdout
 
 
 def clean_worker_container():
@@ -101,17 +101,22 @@ def create_and_run_worker(cmd, request, timeout):
         print("Cannot create worker! Language type is mismatched!")
         return "Language mismatch"
 
-    out = client.containers.run(
-        image=imageName,
-        name=containerName,
-        entrypoint=cmd,
-        remove=True,
-        volumes={
-           f"{GetServerMainDirectory()}/{SERVER_DATA_DIR}": {'bind': WORKER_DATA_DIR, 'mode': 'rw'}
-        },
-        working_dir=GetWorkerRequestDir(request)
-    )
-    return out
+    try:
+        stdout = client.containers.run(
+            image=imageName,
+            name=containerName,
+            entrypoint=cmd,
+            remove=True,
+            volumes={
+                f"{GetServerDir()}/{SERVER_DATA_DIR}": {'bind': WORKER_DATA_DIR, 'mode': 'rw'}
+            },
+            working_dir=GetWorkerRequestDir(request)
+        )
+        return (SUCCESS, stdout)
+    except docker.errors.ContainerError as err:
+        return (ERROR, err.stderr)
+    except:
+        return (ERROR, "Internal error!")
 
 
 def validate_request(request):
@@ -146,9 +151,7 @@ def save_files_on_volume(request):
         file.write(request["code"])
 
 
-def process_request(json):
-    request = json
-
+def process_request(request):
     try:
         validate_request(request)
         save_files_on_volume(request)
@@ -159,9 +162,9 @@ def process_request(json):
     return request
 
 
-def process_tests():
+def run_debug_tests():
     def run_test(jsonPath):
-        filepath = os.path.join(GetServerMainDirectory(), jsonPath)
+        filepath = os.path.join(GetServerDir(), jsonPath)
         with open(filepath) as file:
             request = json.loads(file.read())
             response = process_request(request)
@@ -170,7 +173,8 @@ def process_tests():
     run_test("input_test_haskell.json")
     run_test("input_test_prolog.json")
 
-#process_tests()
+client = docker.from_env()
+run_debug_tests()
 
 def create_app():
     # create and configure the app
