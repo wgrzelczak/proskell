@@ -88,7 +88,7 @@ def clean_worker_container():
 
 def create_and_run_worker(cmd, request, timeoutMs):
     clean_worker_container()
-    
+
     imageName = ""
     containerName = ""
 
@@ -187,7 +187,7 @@ def run_debug_tests():
     run_test("input_test_prolog.json")
 
 client = docker.from_env()
-run_debug_tests()
+#run_debug_tests()
 
 def create_app():
     # create and configure the app
