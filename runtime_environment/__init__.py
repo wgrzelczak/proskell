@@ -19,16 +19,15 @@ JSON_PROLOG_ID = "prolog"
 
 
 def GetWorkerRequestDir(request):
-    return f"{WORKER_DATA_DIR}/{request['userid']}/{request['timestamp']}"
+    return f"{WORKER_DATA_DIR}/{request['userid']}"
 
 
 def GetServerRequestDir(request):
-    return f"{SERVER_DATA_DIR}/{request['userid']}/{request['timestamp']}"
+    return f"{SERVER_DATA_DIR}/{request['userid']}"
 
 
 def GetServerDir():
     return "/var/proskell"
-
 
 def GetCompilerByLanguage(lang):
     if lang == JSON_HASKELL_ID:
