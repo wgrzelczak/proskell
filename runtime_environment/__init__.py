@@ -104,7 +104,7 @@ def create_and_run_worker(cmd, request, timeoutMs):
 
     if (not imageName) or (not containerName):
         print("Cannot create worker! Language type is mismatched!")
-        return "Language mismatch"
+        return (ERROR, "Internal error!")
 
     try:
         stdout = client.containers.run(
@@ -170,7 +170,8 @@ def process_request(request):
         process_all_tests(request)
         clean_request_dir(request)
     except ValueError as err:
-        print(f"ValueError: {err}")
+        request["result_status"] = ERROR
+        request["result_stdout"] = f"Validation failed with error: {err}"
 
     return request
 
