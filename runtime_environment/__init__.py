@@ -20,10 +20,7 @@ JSON_HASKELL_ID = "haskell"
 JSON_PROLOG_ID = "prolog"
 
 def GetWorkingDir():
-    if platform.system() == 'Linux' or platform.system() == 'Darwin':
-        return "/var/proskell"
-    else:
-        return os.path.dirname(os.path.realpath(__file__))
+    return os.path.dirname(os.path.realpath(__file__))
 
 def GetServerMountDir():
     return os.path.join(GetWorkingDir(), SERVER_DATA_DIR)
@@ -94,7 +91,7 @@ def create_and_run_worker(cmd, request, timeoutMs):
     imageName = ""
     containerName = ""
 
-    if timeoutMs is not 0:
+    if timeoutMs is not SUCCESS:
         cmd = f"timeout -s USR2 {timeoutMs * 0.001} {cmd}"
 
     if request['language'] == JSON_HASKELL_ID:
