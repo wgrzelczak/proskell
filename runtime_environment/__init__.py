@@ -1,4 +1,4 @@
-from flask import (Flask, request, Response, json)
+from flask import (Flask, request, Response, json, jsonify)
 import os
 import docker
 import time
@@ -19,18 +19,20 @@ SERVER_DATA_DIR = "mnt_data"
 JSON_HASKELL_ID = "haskell"
 JSON_PROLOG_ID = "prolog"
 
-def GetWorkerRequestDir(request):
-    return f"{WORKER_DATA_DIR}/{request['userid']}/{request['timestamp']}"
-
-
-def GetServerRequestDir(request):
-    return f"{SERVER_DATA_DIR}/{request['userid']}/{request['timestamp']}"
-
-def GetServerDir():
+def GetWorkingDir():
     if platform.system() == 'Linux' or platform.system() == 'Darwin':
         return "/var/proskell"
     else:
         return os.path.dirname(os.path.realpath(__file__))
+
+def GetServerMountDir():
+    return os.path.join(GetWorkingDir(), SERVER_DATA_DIR)
+
+def GetServerRequestDir(request):
+    return f"{GetServerMountDir()}/{request['userid']}/{request['timestamp']}"
+
+def GetWorkerRequestDir(request):
+    return f"{WORKER_DATA_DIR}/{request['userid']}/{request['timestamp']}"
 
 def GetFiletypeByLanguage(lang):
     if lang == JSON_HASKELL_ID:
@@ -113,16 +115,16 @@ def create_and_run_worker(cmd, request, timeoutMs):
             entrypoint=cmd,
             remove=True,
             volumes={
-                f"{GetServerDir()}/{SERVER_DATA_DIR}": {'bind': WORKER_DATA_DIR, 'mode': 'rw'}
+                GetServerMountDir(): {'bind': WORKER_DATA_DIR, 'mode': 'rw'}
             },
             working_dir=GetWorkerRequestDir(request)
         )
-        return (SUCCESS, stdout)
+        return (SUCCESS, stdout.decode("utf-8"))
     except docker.errors.ContainerError as err:
         # 124 is a SIG_USR2, which comes from timeout
         if err.exit_status == 124:
             return (ERROR, "Timeout!")
-        return (ERROR, err.stderr)
+        return (ERROR, err.stderr.decode("utf-8"))
     except Exception as err:
         print(err)
         return (ERROR, "Internal error!")
@@ -193,37 +195,20 @@ client = docker.from_env()
 def create_app():
     # create and configure the app
     app = Flask(__name__, instance_relative_config=True)
-    app.config.from_mapping(
-        SECRET_KEY='dev',
-        DATABASE=os.path.join(app.instance_path, 'tester.sqlite'),
-    )
 
-    # if test_config is None:
-    #     # load the instance config, if it exists, when not testing
-    #     app.config.from_pyfile('config.py', silent=True)
-    # else:
-    #     # load the test config if passed in
-    #     app.config.from_mapping(test_config)
-
-    # ensure the instance folder exists
     try:
         os.makedirs(app.instance_path)
     except OSError:
         pass
 
-    @app.route('/', methods=['GET', 'POST'])
+    @app.route('/', methods=['POST'])
     def main_function():
-        if request.method == 'GET':
-            return 'ALA MA KOTA'
         if request.method == 'POST':
-            print('POST')
-            print(request)
-            print(request.json)
+
             startTime = time.time()
-            # main()
             response = process_request(request.json)
             endTime = time.time()
-            return response
-            # return Response(response, mimetype='application/json')
+
+            return jsonify(response)
 
     return app
