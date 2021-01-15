@@ -5,6 +5,7 @@ import time
 import json
 import platform
 import shutil
+from bson.json_util import loads, dumps
 
 SUCCESS = 0
 ERROR = 1
@@ -189,6 +190,9 @@ def run_debug_tests():
 client = docker.from_env()
 #run_debug_tests()
 
+def parse_json(data):
+    return json.loads(dumps(data))
+
 def create_app():
     # create and configure the app
     app = Flask(__name__, instance_relative_config=True)
@@ -206,6 +210,8 @@ def create_app():
             response = process_request(request.json)
             endTime = time.time()
 
-            return jsonify(response)
+            # return response
+
+            return parse_json(response)
 
     return app
