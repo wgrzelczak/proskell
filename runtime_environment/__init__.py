@@ -136,9 +136,9 @@ def create_and_run_worker(cmd, request, timeoutMs):
             image=imageName,
             name=containerName,
             entrypoint=cmd,
-            # remove=True,
+            remove=True,
             volumes={
-                'pro': {'bind': WORKER_DATA_DIR, 'mode': 'rw'}
+                'data-proskell': {'bind': WORKER_DATA_DIR, 'mode': 'rw'}
             },
             working_dir=GetWorkerRequestDir(request)
 
