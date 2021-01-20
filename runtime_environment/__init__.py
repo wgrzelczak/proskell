@@ -6,8 +6,6 @@ import json
 import platform
 import shutil
 from bson.json_util import loads, dumps
-# import subprocess
-
 from .debugger import initialize_flask_server_debugger_if_needed
 
 initialize_flask_server_debugger_if_needed()
@@ -19,23 +17,31 @@ WORKER_HASKELL_IMAGE_NAME = "haskell"
 WORKER_HASKELL_NAME = "worker_haskell"
 WORKER_PROLOG_IMAGE_NAME = "prolog"
 WORKER_PROLOG_NAME = "worker_prolog"
-WORKER_DATA_DIR = "/var/proskell"
-SERVER_DATA_DIR = "mnt_data"
+WORKER_DATA_DIR = "/var/data"
+SERVER_DATA_DIR = "/var/data"
 
 JSON_HASKELL_ID = "haskell"
 JSON_PROLOG_ID = "prolog"
 
-def GetWorkingDir():
-    return os.path.dirname(os.path.realpath(__file__))
+
+def GetWorkerRequestDir(request):
+    return f"{WORKER_DATA_DIR}/{request['userid']}/{request['timestamp']}"
+
 
 def GetServerMountDir():
-    return os.path.join(GetWorkingDir(), SERVER_DATA_DIR)
+    return os.path.join(SERVER_DATA_DIR)
+
 
 def GetServerRequestDir(request):
     return f"{GetServerMountDir()}/{request['userid']}/{request['timestamp']}"
 
-def GetWorkerRequestDir(request):
-    return f"{WORKER_DATA_DIR}/{request['userid']}/{request['timestamp']}"
+
+def GetServerDir():
+    if platform.system() == 'Linux' or platform.system() == 'Darwin':
+        return os.getcwd()
+    else:
+        return os.path.dirname(os.path.realpath(__file__))
+
 
 def GetFiletypeByLanguage(lang):
     if lang == JSON_HASKELL_ID:
@@ -43,6 +49,7 @@ def GetFiletypeByLanguage(lang):
     if lang == JSON_PROLOG_ID:
         return "pl"
     return ""
+
 
 def process_all_tests(request):
     tests = request["tests"]
@@ -73,7 +80,8 @@ def process_all_tests(request):
     for i in range(len(tests)):
         print(f"Processing test {i}...")
         cmd = f"bash -c 'cat test{i} | ./{executable}'"
-        (status, stdout) = create_and_run_worker(cmd, request, request["timeoutMs"])
+        (status, stdout) = create_and_run_worker(
+            cmd, request, request["timeoutMs"])
         tests[i]["result_status"] = status
         tests[i]["result_stdout"] = stdout
 
@@ -99,7 +107,6 @@ def create_and_run_worker(cmd, request, timeoutMs):
 
     if timeoutMs is not SUCCESS:
         cmd = f"timeout -s USR2 {timeoutMs * 0.001} {cmd}"
-    # cmd = 'ls /var/haskell/151617/1598630096'
 
     if request['language'] == JSON_HASKELL_ID:
         imageName = WORKER_HASKELL_IMAGE_NAME
@@ -112,27 +119,18 @@ def create_and_run_worker(cmd, request, timeoutMs):
         print("Cannot create worker! Language type is mismatched!")
         return (ERROR, "Internal error!")
 
-    # print(f'GetServerMountDir {GetServerMountDir()}')
-    # print(f'WORKER_DATA_DIR {WORKER_DATA_DIR}')
-    # print(f'GetWorkerRequestDir {GetWorkerRequestDir(request)}')
-    # bashCmd = ["pwd"]
-    # process = subprocess.Popen(bashCmd, stdout=subprocess.PIPE)
-    # output, error = process.communicate()
-    # print(output)
-
     try:
         stdout = client.containers.run(
             image=imageName,
             name=containerName,
             entrypoint=cmd,
-            # remove=True,
+            remove=True,
             volumes={
-                GetServerMountDir(): {'bind': WORKER_DATA_DIR, 'mode': 'rw'}
+                'data-proskell': {'bind': WORKER_DATA_DIR, 'mode': 'rw'}
             },
             working_dir=GetWorkerRequestDir(request)
-            
         )
-        print(stdout.decode("utf-8"))
+
         return (SUCCESS, stdout.decode("utf-8"))
 
     except docker.errors.ContainerError as err:
@@ -180,6 +178,7 @@ def save_files_on_volume(request):
 def clean_request_dir(request):
     shutil.rmtree(GetServerRequestDir(request), ignore_errors=True)
 
+
 def process_request(request):
     try:
         validate_request(request)
@@ -204,14 +203,14 @@ def run_debug_tests():
     run_test("input_test_haskell.json")
     run_test("input_test_prolog.json")
 
+
 client = docker.from_env()
-#run_debug_tests()
 
 def parse_json(data):
     return json.loads(dumps(data))
 
-def create_app():
 
+def create_app():
     # create and configure the app
     app = Flask(__name__, instance_relative_config=True)
 
