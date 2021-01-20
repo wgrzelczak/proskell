@@ -6,8 +6,6 @@ import json
 import platform
 import shutil
 from bson.json_util import loads, dumps
-# import subprocess
-
 from .debugger import initialize_flask_server_debugger_if_needed
 
 initialize_flask_server_debugger_if_needed()
@@ -109,7 +107,6 @@ def create_and_run_worker(cmd, request, timeoutMs):
 
     if timeoutMs is not SUCCESS:
         cmd = f"timeout -s USR2 {timeoutMs * 0.001} {cmd}"
-    # cmd = 'ls /var/haskell/151617/1598630096'
 
     if request['language'] == JSON_HASKELL_ID:
         imageName = WORKER_HASKELL_IMAGE_NAME
@@ -122,16 +119,7 @@ def create_and_run_worker(cmd, request, timeoutMs):
         print("Cannot create worker! Language type is mismatched!")
         return (ERROR, "Internal error!")
 
-    # print(f'GetServerMountDir {GetServerMountDir()}')
-    # print(f'WORKER_DATA_DIR {WORKER_DATA_DIR}')
-    # print(f'GetWorkerRequestDir {GetWorkerRequestDir(request)}')
-    # bashCmd = ["pwd"]
-    # process = subprocess.Popen(bashCmd, stdout=subprocess.PIPE)
-    # output, error = process.communicate()
-    # print(output)
-
     try:
-
         stdout = client.containers.run(
             image=imageName,
             name=containerName,
@@ -141,9 +129,8 @@ def create_and_run_worker(cmd, request, timeoutMs):
                 'data-proskell': {'bind': WORKER_DATA_DIR, 'mode': 'rw'}
             },
             working_dir=GetWorkerRequestDir(request)
-
         )
-        print(stdout.decode("utf-8"))
+
         return (SUCCESS, stdout.decode("utf-8"))
 
     except docker.errors.ContainerError as err:
@@ -218,15 +205,12 @@ def run_debug_tests():
 
 
 client = docker.from_env()
-# run_debug_tests()
-
 
 def parse_json(data):
     return json.loads(dumps(data))
 
 
 def create_app():
-
     # create and configure the app
     app = Flask(__name__, instance_relative_config=True)
 
